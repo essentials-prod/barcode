@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#011540">
+  <title>Essentials | Barcode Scanner</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#14213d;background:#f3f6fa}
+    *{box-sizing:border-box}body{margin:0}header{background:#011540;color:#fff;padding:21px 20px;border-bottom:5px solid #72bf43}
+    .brand{max-width:690px;margin:auto;font-size:23px;font-weight:800;letter-spacing:.2px}.brand span{color:#72bf43}
+    main{max-width:690px;margin:26px auto;padding:0 16px 32px}.panel{background:white;border-radius:16px;padding:24px;box-shadow:0 8px 30px #01154012}
+    h1{font-size:25px;margin:0 0 8px}p{line-height:1.5;color:#526176;margin:0 0 20px}
+    .camera{position:relative;aspect-ratio:16/7;background:#0a1529;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#c8d2e0;margin:20px 0}
+    video{width:100%;height:100%;object-fit:cover;display:none}.camera.active video{display:block}.camera.active .placeholder{display:none}
+    .placeholder{text-align:center;padding:25px}.placeholder svg{width:55px;height:55px;display:block;margin:0 auto 12px;opacity:.65}
+    .target{position:absolute;inset:18% 5%;border:3px solid #72bf43;border-radius:13px;pointer-events:none;display:none;box-shadow:0 0 0 200px #0004}.camera.active .target{display:block}
+    .target:after{content:"";position:absolute;left:10%;right:10%;top:50%;height:2px;background:#72bf43;opacity:.85}
+    button{border:0;border-radius:10px;padding:14px 20px;font:inherit;font-weight:700;cursor:pointer;min-height:48px}
+    .primary{background:#72bf43;color:#011540;width:100%}.primary:disabled{opacity:.6;cursor:wait}.secondary{background:#e8eef5;color:#011540}
+    .actions{display:flex;gap:10px}.actions button{flex:1}.hidden{display:none!important}
+    #status{font-size:14px;margin:13px 0 0;color:#526176;min-height:22px}#status.error{color:#a22b28}
+    .manual{margin-top:24px;border-top:1px solid #e1e7ee;padding-top:19px}label{display:block;font-size:14px;font-weight:700;margin-bottom:8px}
+    .manualrow{display:flex;gap:9px}input{width:100%;min-width:0;border:1px solid #bdcad8;border-radius:9px;padding:12px;font:inherit}.manualrow button{white-space:nowrap}
+    .result{margin-top:18px;padding:15px;border:1px solid #d6e3d1;border-radius:10px;background:#f7fbf5;overflow-wrap:anywhere}
+    .result strong{display:block;margin-bottom:7px}.result .value{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:14px}
+    .note{font-size:12px;margin:16px 0 0}a{color:#12609a}
+    @media(max-width:440px){.panel{padding:17px}.actions{flex-direction:column}.manualrow{flex-direction:column}.camera{aspect-ratio:16/8}}
+  
+    .diag{margin-top:22px;border:1px solid #c9d6e4;border-radius:12px;overflow:hidden;background:#f8fafc}
+    .diag summary{padding:14px 16px;font-weight:800;cursor:pointer;color:#011540}
+    .diagbody{padding:0 14px 16px}
+    .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .stat{background:#fff;border:1px solid #e0e8f0;border-radius:8px;padding:9px;min-width:0}
+    .stat small{display:block;color:#64748b}.stat b{font-size:14px;overflow-wrap:anywhere}
+    .diag pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#101e35;color:#e3edfa;padding:12px;border-radius:8px;font-size:11px;max-height:280px;overflow:auto}
+    .diagbuttons{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+    .diagbuttons button{padding:9px 11px;min-height:38px;font-size:13px}
+    .optrow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:10px 0}
+    .optrow input[type=range]{flex:1;min-width:100px}
+    .optrow select{max-width:100%;padding:8px;border:1px solid #c9d6e4;border-radius:7px}
+    .optrow label{margin:0}
+    #log{max-height:220px;overflow:auto;background:#101e35;color:#d6e5f6;border-radius:8px;padding:10px;font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+  </style>
+</head>
+<body>
+<header><div class="brand">ESSENTIALS <span>●</span> Barcode Scanner</div></header>
+<main><section class="panel">
+  <h1>Scan Equipment Barcode</h1>
+  <p>Point your device's rear camera at the equipment barcode. A matching model opens automatically.</p>
+  <div id="camera" class="camera">
+    <video id="preview" autoplay muted playsinline></video>
+    <div class="placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7V5a2 2 0 0 1 2-2h3M15 3h3a2 2 0 0 1 2 2v2M20 17v2a2 2 0 0 1-2 2h-3M9 21H6a2 2 0 0 1-2-2v-2M3 12h18M7 9v6m3-6v6m4-6v6m3-6v6"/></svg>Camera preview appears here</div>
+    <div class="target"></div>
+  </div>
+  <button id="start" class="primary">Scan Barcode</button>
+  <div id="activeActions" class="actions hidden"><button id="stop" class="secondary">Stop Camera</button><button id="torch" class="secondary hidden">Toggle Flashlight</button></div>
+  <div id="status" role="status" aria-live="polite">Ready to scan.</div>
+  <div id="result" class="result hidden" aria-live="polite"></div>
+  <details class="diag" open>
+    <summary>🔧 Scanner diagnostics — test mode</summary>
+    <div class="diagbody">
+      <div class="stats">
+        <div class="stat"><small>Decoder / format</small><b id="dDecoder">Not started</b></div>
+        <div class="stat"><small>Decode attempts</small><b id="dAttempts">0</b></div>
+        <div class="stat"><small>Video resolution</small><b id="dResolution">—</b></div>
+        <div class="stat"><small>Video / track state</small><b id="dState">—</b></div>
+        <div class="stat"><small>Successful decodes</small><b id="dSuccess">0</b></div>
+        <div class="stat"><small>Not found / other errors</small><b id="dErrors">0 / 0</b></div>
+        <div class="stat"><small>Frame updates / estimated FPS</small><b id="dFrames">—</b></div>
+        <div class="stat"><small>Last decoder message</small><b id="dLast">—</b></div>
+      </div>
+      <div class="optrow"><label for="cameraChoice">Camera</label><select id="cameraChoice"><option value="">Automatic rear camera</option></select><button id="refreshCameras" class="secondary" type="button">Refresh list</button></div>
+      <div class="optrow"><label for="zoomRange">Camera zoom</label><input id="zoomRange" type="range" min="1" max="1" step=".1" value="1" disabled><span id="zoomLabel">Unsupported / unknown</span></div>
+      <div class="optrow"><button id="focusContinuous" class="secondary" type="button">Try continuous focus</button><button id="focusSingle" class="secondary" type="button">Try single focus</button><button id="resolutionBtn" class="secondary" type="button">Request 1080p</button></div>
+      <div class="diagbuttons"><button id="snapshot" class="secondary" type="button">Capture frame</button><button id="refreshDiag" class="secondary" type="button">Refresh diagnostics</button><button id="copyDiag" class="secondary" type="button">Copy report</button><button id="saveDiag" class="secondary" type="button">Download report</button><button id="clearLog" class="secondary" type="button">Clear log</button></div>
+      <label>Device, camera capabilities, active settings and constraints</label>
+      <pre id="cameraDetails">Waiting for camera…</pre>
+      <label>Timestamped event log</label>
+      <div id="log" aria-live="off">Ready.</div>
+      <p class="note">Reports contain device/browser and camera technical details. Review before sharing. No images or reports are uploaded automatically.</p>
+    </div>
+  </details>
+  <div class="manual">
+    <label for="manualCode">Manual barcode entry / testing</label>
+    <div class="manualrow"><input id="manualCode" type="text" inputmode="text" autocomplete="off" placeholder="Enter GTIN or full barcode text"><button id="lookup" class="secondary">Look Up</button></div>
+  </div>
+  <p class="note">Camera access requires HTTPS (or localhost). Barcode decoding uses an internet-loaded library; model lookup itself is built into this page. No scanned data is uploaded by this page.</p>
+</section></main>
+
+<script>
+'use strict';
+const EQUIPMENT=Object.freeze({
+ '00072504134536':{model:'BUNN ICB-DV Tall',url:'https://essentials-prod.github.io/essentials/equipment/ICBDVT3.0.html'},
+ '00072504078663':{model:'BUNN CWTF15 (test mapping)',url:'https://essentials-prod.github.io/essentials/equipment/ICBDVT3.0.html'}
+});
+const $=id=>document.getElementById(id);
+const video=$('preview'),camera=$('camera'),start=$('start'),activeActions=$('activeActions');
+let reader=null,controls=null,nativeStream=null,nativeLoop=false,session=0,busy=false,redirecting=false,torchOn=false;
+let decoderName='—',attempts=0,notFound=0,otherErrors=0,successes=0,lastError='—',lastRaw='',startTime=0;
+let logLines=[],tick=null,frameSamples=[],lastVideoFrames=null;
+function log(msg){const line=new Date().toLocaleTimeString()+' | '+msg;logLines.push(line);if(logLines.length>250)logLines.shift();$('log').textContent=logLines.slice(-100).join('\n');console.log('[Essentials Scanner]',msg)}
+function message(msg,error=false){$('status').textContent=msg;$('status').classList.toggle('error',error)}
+function cleanError(e){return (e?.name||e?.constructor?.name||'Error')+': '+(e?.message||String(e))}
+function safeJson(v){try{return JSON.stringify(v,(key,value)=>/^(deviceId|groupId)$/i.test(key)&&typeof value==='string'?'[redacted]':value,2)}catch(e){return String(v)}}
+function track(){return video.srcObject?.getVideoTracks?.()[0]||null}
+function capabilities(){try{return track()?.getCapabilities?.()||{}}catch(e){log('getCapabilities failed: '+cleanError(e));return {}}}
+function settings(){try{return track()?.getSettings?.()||{}}catch(e){return {error:cleanError(e)}}}
+function constraints(){try{return track()?.getConstraints?.()||{}}catch(e){return {error:cleanError(e)}}}
+function summarizeError(e){const n=e?.name||e?.constructor?.name||'Unknown';return n+': '+(e?.message||'No detail')}
+function refresh(){
+ const t=track(),v=video,cap=capabilities(),set=settings();
+ $('dDecoder').textContent=decoderName;
+ $('dAttempts').textContent=String(attempts);
+ $('dResolution').textContent=(v.videoWidth||0)+' × '+(v.videoHeight||0)+' / '+(set.width||'?')+' × '+(set.height||'?');
+ $('dState').textContent=(t?.readyState||'no track')+' / video '+v.readyState+' / '+(v.paused?'paused':'playing');
+ $('dSuccess').textContent=String(successes);
+ $('dErrors').textContent=notFound+' / '+otherErrors;
+ $('dLast').textContent=lastError;
+ const fps=set.frameRate??'unknown';
+ let observed='unknown';
+ if(typeof v.getVideoPlaybackQuality==='function'){const q=v.getVideoPlaybackQuality();if(Number.isFinite(q.totalVideoFrames)){frameSamples.push([performance.now(),q.totalVideoFrames]);if(frameSamples.length>5)frameSamples.shift();if(frameSamples.length>1){const first=frameSamples[0],last=frameSamples.at(-1);observed=((last[1]-first[1])*1000/Math.max(1,last[0]-first[0])).toFixed(1)}}}
+ $('dFrames').textContent=observed+' fps observed / '+fps+' fps track';
+ $('cameraDetails').textContent=safeJson({
+  page:{secureContext:window.isSecureContext,protocol:location.protocol,online:navigator.onLine,visibility:document.visibilityState},
+  browser:{userAgent:navigator.userAgent,platform:navigator.platform,deviceMemory:navigator.deviceMemory??'not exposed',hardwareConcurrency:navigator.hardwareConcurrency??'not exposed'},
+  session:{decoder:decoderName,elapsedSeconds:startTime?Math.round((Date.now()-startTime)/1000):0,attempts,notFound,otherErrors,successes,lastError,lastRaw},
+  video:{width:v.videoWidth,height:v.videoHeight,readyState:v.readyState,paused:v.paused,playbackQuality:typeof v.getVideoPlaybackQuality==='function'?v.getVideoPlaybackQuality():null},
+  track:{label:t?.label||null,readyState:t?.readyState||null,enabled:t?.enabled??null,muted:t?.muted??null,settings:set,constraints:constraints(),capabilities:cap},
+  supportedConstraints:navigator.mediaDevices?.getSupportedConstraints?.()||{}
+ });
+ const z=$('zoomRange'),zl=$('zoomLabel');
+ if(cap.zoom&&Number.isFinite(cap.zoom.min)&&Number.isFinite(cap.zoom.max)&&cap.zoom.max>cap.zoom.min){
+  z.disabled=false;z.min=cap.zoom.min;z.max=cap.zoom.max;z.step=cap.zoom.step||.1;
+  if(document.activeElement!==z)z.value=Math.max(cap.zoom.min,Math.min(cap.zoom.max,set.zoom??cap.zoom.min));
+  zl.textContent=(set.zoom??z.value)+'× (range '+cap.zoom.min+'–'+cap.zoom.max+')';
+ }else{z.disabled=true;zl.textContent='Not exposed by browser'}
+ $('focusContinuous').disabled=!t;
+ $('focusSingle').disabled=!t;
+ $('resolutionBtn').disabled=!t;
+ $('snapshot').disabled=!(v.videoWidth&&v.videoHeight);
+}
+async function cameras(){
+ if(!navigator.mediaDevices?.enumerateDevices)return;
+ try{
+  const list=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');
+  const sel=$('cameraChoice'),old=sel.value;sel.replaceChildren(new Option('Automatic rear camera',''));
+  list.forEach((d,i)=>sel.add(new Option(d.label||'Camera '+(i+1),d.deviceId)));
+  if([...sel.options].some(o=>o.value===old))sel.value=old;
+  log('Camera enumeration: '+list.map((d,i)=>i+': '+(d.label||'unlabeled')).join(' | '));
+ }catch(e){log('Camera enumeration failed: '+cleanError(e))}
+}
+async function loadZXing(){
+ if(window.ZXingBrowser?.BrowserMultiFormatReader)return true;
+ const urls=[
+  'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/zxing-browser.min.js',
+  'https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js',
+  'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js',
+  'https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js',
+  'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5',
+  'https://unpkg.com/@zxing/browser@0.1.5'
+ ];
+ for(const url of urls){
+  try{await new Promise((resolve,reject)=>{const el=document.createElement('script');el.src=url;el.async=true;el.onload=resolve;el.onerror=()=>reject(Error('CDN unavailable'));document.head.appendChild(el)});
+   if(window.ZXingBrowser?.BrowserMultiFormatReader){log('ZXing loaded: '+url);return true}
+  }catch(e){log('Library URL failed: '+url)}
+ }
+ return false;
+}
+function gtinValid(n){if(!/^\d{14}$/.test(n))return false;let sum=0;for(let i=0;i<13;i++)sum+=Number(n[i])*(i%2===0?3:1);return (10-sum%10)%10===Number(n[13])}
+function normalizeGtin(s){if(!/^\d{12,14}$/.test(s))return null;const n=s.padStart(14,'0');return gtinValid(n)?n:null}
+function extractGtin(raw){
+ const s=String(raw||'').trim();let m=s.match(/\(01\)\s*(\d{14})/);if(m)return normalizeGtin(m[1]);
+ const stripped=s.replace(/^\][A-Za-z0-9]{2}/,'');m=stripped.match(/^01(\d{14})(?=\D|$|21\S*)/);
+ if(m)return normalizeGtin(m[1]);return normalizeGtin(stripped);
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function halt(){
+ ++session;nativeLoop=false;
+ try{controls?.stop()}catch(e){log('ZXing stop: '+cleanError(e))}
+ controls=null;reader=null;
+ if(nativeStream){nativeStream.getTracks().forEach(t=>t.stop());nativeStream=null}
+ if(video.srcObject){video.srcObject.getTracks().forEach(t=>t.stop());video.srcObject=null}
+ camera.classList.remove('active');activeActions.classList.add('hidden');$('torch').classList.add('hidden');start.classList.remove('hidden');start.disabled=false;busy=false;torchOn=false;
+ if(tick){clearInterval(tick);tick=null}refresh();
+}
+function handleScan(raw){
+ if(redirecting)return;
+ lastRaw=String(raw);successes++;log('DECODE SUCCESS: '+lastRaw+' | GTIN: '+(extractGtin(raw)||'none'));
+ const gtin=extractGtin(raw),item=gtin&&EQUIPMENT[gtin];halt();
+ $('result').classList.remove('hidden');
+ if(item){redirecting=true;$('result').innerHTML='<strong>✓ Match found: '+escapeHtml(item.model)+'</strong><div class="value">GTIN: '+escapeHtml(gtin)+'</div><div>Opening equipment page…</div><p style="margin:8px 0 0"><a href="'+escapeHtml(item.url)+'">Tap here if it does not open</a></p>';message('Equipment identified. Redirecting…');window.location.assign(item.url);return}
+ $('result').innerHTML='<strong>Equipment Not Found</strong><div>Scanned value:</div><div class="value">'+escapeHtml(raw)+'</div><div style="margin-top:8px">GTIN: <span class="value">'+escapeHtml(gtin||'Not recognized')+'</span></div><button id="copyResult" class="secondary" style="margin-top:12px">Copy Barcode</button>';
+ $('copyResult').onclick=()=>navigator.clipboard.writeText(String(raw)).then(()=>message('Barcode copied.')).catch(e=>message('Clipboard unavailable.',true));
+ message(gtin?'GTIN not found in equipment lookup.':'No valid GTIN extracted.',true);
+}
+function onDecode(decoded,err,which){
+ if(decoded&&!redirecting){log('Barcode format: '+(decoded.getBarcodeFormat?.()??'unknown'));handleScan(decoded.getText());return}
+ if(!err)return;
+ attempts++;
+ const name=err.name||err.constructor?.name||'UnknownError';
+ const msg=err.message||'';
+ // ZXing commonly returns NotFoundException, ChecksumException or FormatException on ordinary frames.
+ if(/NotFound|Checksum|Format/i.test(name)||/No MultiFormat Readers were able to detect/i.test(msg)){
+  notFound++;
+  if(attempts===1||attempts%60===0)log('Decode attempts '+attempts+'; ordinary non-decodes '+notFound+'; last '+name);
+ }else{otherErrors++;lastError=summarizeError(err);if(otherErrors<6||otherErrors%20===0)log('Decode error '+otherErrors+': '+lastError)}
+ if(attempts%20===0){message(which+' scanning: '+attempts+' attempts, '+notFound+' non-decodes, '+otherErrors+' other errors.');refresh()}
+}
+async function applyChange(obj,label){
+ const t=track();if(!t){log(label+': no camera track');return}
+ try{
+  const old=t.getConstraints?.()||{};
+  await t.applyConstraints({...old,advanced:[...(old.advanced||[]),obj]});
+  log(label+' requested: '+safeJson(obj)+' | actual: '+safeJson(t.getSettings?.()||{}));
+ }catch(e){log(label+' failed: '+cleanError(e));message(label+' unavailable: '+(e.message||e.name),true)}
+ refresh();
+}
+async function improveCamera(){
+ const t=track();if(!t)return;
+ const cap=capabilities();
+ log('Camera track acquired: '+(t.label||'unlabeled')+' | settings '+safeJson(settings()));
+ if(Array.isArray(cap.focusMode)&&cap.focusMode.includes('continuous'))await applyChange({focusMode:'continuous'},'Continuous focus');
+ else log('Continuous focus: not exposed as supported (hardware may still autofocus)');
+ if(cap.torch===true)$('torch').classList.remove('hidden');
+ await cameras();refresh();
+}
+function makeHints(){
+ const Z=window.ZXingBrowser;
+ if(!Z?.DecodeHintType||!Z?.BarcodeFormat){log('ZXing hint enums not exported by browser bundle; using default multi-format reader');return null}
+ const hints=new Map();
+ hints.set(Z.DecodeHintType.TRY_HARDER,true);
+ hints.set(Z.DecodeHintType.POSSIBLE_FORMATS,[Z.BarcodeFormat.CODE_128,Z.BarcodeFormat.EAN_13,Z.BarcodeFormat.UPC_A,Z.BarcodeFormat.EAN_8].filter(x=>x!==undefined));
+ log('ZXing hints: TRY_HARDER + CODE_128, EAN_13, UPC_A, EAN_8');
+ return hints;
+}
+async function startNative(token){
+ const supported=await BarcodeDetector.getSupportedFormats();
+ const formats=['code_128','ean_13','ean_8','upc_a'].filter(f=>supported.includes(f));
+ if(!formats.length)throw Error('No supported native barcode formats');
+ const detector=new BarcodeDetector({formats});
+ const selected=$('cameraChoice').value;
+ nativeStream=await navigator.mediaDevices.getUserMedia({audio:false,video:selected?{deviceId:{exact:selected},width:{ideal:1920},height:{ideal:1080}}:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
+ if(token!==session){nativeStream.getTracks().forEach(t=>t.stop());return}
+ video.srcObject=nativeStream;await video.play();nativeLoop=true;decoderName='Native: '+formats.join(',');
+ await improveCamera();setRunning();
+ while(nativeLoop&&token===session&&!redirecting){
+  try{if(video.readyState>=2){attempts++;const found=await detector.detect(video);if(found.length){log('Native format: '+found[0].format);handleScan(found[0].rawValue);break}notFound++;if(attempts%50===0)log('Native attempts: '+attempts)}}
+  catch(e){otherErrors++;lastError=cleanError(e);log('Native error: '+lastError)}
+  await new Promise(r=>setTimeout(r,160));
+ }
+}
+function setRunning(){
+ camera.classList.add('active');start.classList.add('hidden');activeActions.classList.remove('hidden');
+ message('Scanning with '+decoderName+'. Hold the barcode steady.');
+ startTime=Date.now();frameSamples=[];tick=setInterval(refresh,1000);refresh();
+}
+async function begin(){
+ if(busy||redirecting)return;
+ $('result').classList.add('hidden');attempts=notFound=otherErrors=successes=0;lastError='—';lastRaw='';decoderName='Loading';startTime=0;
+ busy=true;start.disabled=true;const token=++session;
+ if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia){busy=false;start.disabled=false;message('Camera requires HTTPS and a compatible browser.',true);return}
+ log('--- NEW SCAN SESSION ---');message('Loading ZXing…');refresh();
+ try{
+  if(!await loadZXing()){
+   if('BarcodeDetector' in window){log('ZXing unavailable; using native detector');await startNative(token);return}
+   throw Error('ZXing library unavailable and no native detector supported');
+  }
+  if(token!==session)return;
+  const hints=makeHints();
+  reader=hints?new ZXingBrowser.BrowserMultiFormatReader(hints,{delayBetweenScanAttempts:110}):new ZXingBrowser.BrowserMultiFormatReader();
+  decoderName=hints?'ZXing: Code 128 + EAN/UPC, TRY_HARDER':'ZXing: default formats (hint exports unavailable)';
+  const chosen=$('cameraChoice').value;
+  let id=chosen||undefined;
+  if(!id){try{const dev=await ZXingBrowser.BrowserCodeReader.listVideoInputDevices();id=dev.find(d=>/back|rear|environment/i.test(d.label))?.deviceId}catch(e){log('Rear camera selection: '+cleanError(e))}}
+  log('Starting ZXing camera '+(id?'selected/rear':'default'));
+  controls=await reader.decodeFromVideoDevice(id,video,(decoded,err)=>{if(token===session)onDecode(decoded,err,'ZXing')});
+  if(token!==session){controls?.stop();return}
+  await improveCamera();setRunning();
+  // Apply ideal 1080p after ZXing acquires the camera. Never require it.
+  const t=track();
+  if(t)try{await t.applyConstraints({...t.getConstraints(),width:{ideal:1920},height:{ideal:1080}});log('1080p requested; actual '+safeJson(settings()))}catch(e){log('1080p request rejected: '+cleanError(e))}
+  refresh();
+ }catch(e){log('Start failed: '+cleanError(e));halt();message('Unable to start scanner: '+(e.message||e.name),true)}
+}
+start.onclick=begin;
+$('stop').onclick=()=>{halt();message('Camera stopped.');log('Camera stopped by user')};
+$('torch').onclick=async()=>{
+ const t=track();if(!t)return;torchOn=!torchOn;
+ try{await t.applyConstraints({...t.getConstraints(),advanced:[{torch:torchOn}]});log('Torch '+(torchOn?'ON':'OFF'));message('Flashlight '+(torchOn?'on':'off'))}
+ catch(e){torchOn=false;log('Torch failed: '+cleanError(e));message('Flashlight unavailable',true)}refresh();
+};
+$('refreshCameras').onclick=cameras;
+$('cameraChoice').onchange=()=>{log('Camera selected: '+($('cameraChoice').selectedOptions[0]?.text||'auto')+' (takes effect on next scan)');message('Camera selection will apply when you restart scanning.')};
+$('zoomRange').oninput=()=>{$('zoomLabel').textContent=$('zoomRange').value+'× (requested)'};
+$('zoomRange').onchange=()=>applyChange({zoom:Number($('zoomRange').value)},'Zoom');
+$('focusContinuous').onclick=()=>applyChange({focusMode:'continuous'},'Continuous focus');
+$('focusSingle').onclick=()=>applyChange({focusMode:'single-shot'},'Single-shot focus');
+$('resolutionBtn').onclick=async()=>{const t=track();if(!t)return;try{await t.applyConstraints({...t.getConstraints(),width:{ideal:1920},height:{ideal:1080}});log('1080p requested; actual '+safeJson(settings()))}catch(e){log('1080p failed: '+cleanError(e))}refresh()};
+$('refreshDiag').onclick=()=>{refresh();log('Diagnostics refreshed')};
+$('clearLog').onclick=()=>{logLines=[];$('log').textContent='Log cleared.'};
+$('snapshot').onclick=()=>{
+ if(!video.videoWidth)return;
+ try{const c=document.createElement('canvas');c.width=video.videoWidth;c.height=video.videoHeight;c.getContext('2d').drawImage(video,0,0);c.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='essentials-camera-frame.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);log('Captured '+c.width+'×'+c.height+' frame locally')},'image/png')}
+ catch(e){log('Snapshot failed: '+cleanError(e))}
+};
+function report(){refresh();return 'ESSENTIALS SCANNER DIAGNOSTIC REPORT\n'+new Date().toISOString()+'\n\n'+$('cameraDetails').textContent+'\n\nEVENT LOG\n'+logLines.join('\n')}
+$('copyDiag').onclick=async()=>{try{await navigator.clipboard.writeText(report());message('Diagnostic report copied.');log('Report copied')}catch(e){log('Copy failed: '+cleanError(e));message('Copy blocked. Use Download report.',true)}};
+$('saveDiag').onclick=()=>{const blob=new Blob([report()],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='essentials-scanner-diagnostics.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);log('Report downloaded')};
+$('lookup').onclick=()=>handleScan($('manualCode').value);
+$('manualCode').onkeydown=e=>{if(e.key==='Enter')handleScan(e.currentTarget.value)};
+window.addEventListener('pagehide',halt);
+log('Page initialized; secure context='+window.isSecureContext);refresh();cameras();
+</script>
+</body>
+</html>
